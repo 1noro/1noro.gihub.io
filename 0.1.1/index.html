@@ -1,0 +1,374 @@
+<!--
+          _             _                 _     _       
+     __ _| |_   _ _ __ | |__    _ __ __ _| |_  | | __ _ 
+    / _` | | | | | '_ \| '_ \  | '__/ _` | __| | |/ _` |
+   | (_| | | |_| | |_) | | | |_| | | (_| | |_ _| | (_| |
+    \__, |_|\__, | .__/|_| |_(_)_|  \__,_|\__(_)_|\__,_|
+    |___/   |___/|_|                                    
+
+    glyph.rat.la by Inoro (github.com/1noro)
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <title>Generate - glyph.rat.la</title>
+        <link rel="icon" href="favicon.webp" type="image/webp" sizes="50x50" />
+
+        <meta name="author" content="Inoro" /> <!-- This site was made by https://github.com/1noro -->
+        <meta name="description" content="Web to obtain a random string based on an input text and a simple configuration." />
+        <meta name="robots" content="noindex" />
+
+        <style>
+            body {
+                background-color: #FFFFFF;
+                color: #000000;
+                font-size: 1.1em; /* 1.35em, 14pt */
+                /* font-family: Times, Serif; */
+                font-family: Helvetica, sans-serif;
+            }
+
+            /* --- HEADER & FOOTER --- */
+            header, footer, p.center {text-align: center;}
+
+            header div#web_title {
+                font-size: 1.9em; /* this value multiplies the value defined in the body */
+                font-weight: bold;
+                margin: 16px 0px; /* because it is a <div> and not a <p> */
+            }
+
+            /* --- MAIN --- */
+            main {
+                max-width: 350px;
+                margin: 0 auto;
+                /* background-color: aquamarine; */
+                text-align: center;
+            }
+
+            /* --- table --- */
+            table {
+                margin: 0px auto;
+                text-align: center;
+                font-family: monospace;
+                /* font-size: 1.25vw; */
+                font-size: 1.5em;
+                /* font-weight: bold; */
+            }
+
+            td {
+                width: 25px;
+                cursor: pointer;
+            }
+
+            td:hover {
+                font-weight: bold;
+            }
+        </style>
+
+    <script>
+        /*
+        The JavaScript code contained in this page is essential for its 
+        operation.
+        
+        @licstart The following is the entire license notice for the 
+        JavaScript code in this page.
+        
+        Copyright 2021 Inoro.
+    
+        This program is free software: you can redistribute it and/or modify 
+        it under the terms of the GNU General Public License as published by 
+        the Free Software Foundation, either version 3 of the License, or 
+        (at your option) any later version.
+    
+        This program is distributed in the hope that it will be useful, 
+        but WITHOUT ANY WARRANTY; without even the implied warranty of 
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+        GNU General Public License for more details.
+    
+        You should have received a copy of the GNU General Public License 
+        along with this program.  If not, see http://www.gnu.org/licenses/.
+        
+        @licend The above is the entire license notice for the JavaScript 
+        code in this page.
+        */
+    </script>
+
+    <script>
+
+        // --- Globals ---
+
+        const tableSize = 10;
+        const charTableSize = 8;
+        const sampText = "Holmes, Lowell and Longfellow lie buried in Mount Auburn";
+        const errorText = "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";
+        const specialChars = "_!@#$%^&*(){}[]:\";'<>?,/-+=\|";
+
+        // --- Utils ---
+
+        function upperLowerCase(text) {
+            let result = text.charAt(0);
+            for (let i = 1; i < text.length; i++) {
+                if (text.charCodeAt(i - 1) % 2 != 0) {
+                    result += text.charAt(i).toUpperCase();
+                } else {
+                    result += text.charAt(i);
+                }
+            }
+            return result;
+        }
+
+        function getStats(text) {
+            let number = 0;
+            let lower = 0;
+            let upper = 0;
+            let special = 0;
+            for (let i = 0; i < text.length; i++) {
+                if (/^\d+$/.test(text.charAt(i))) {
+                    number++;
+                } else if (/[a-z]/.test(text.charAt(i))) {
+                    lower++;
+                } else if (/[A-Z]/.test(text.charAt(i))) {
+                    upper++;
+                } else {
+                    special++;
+                }
+            }
+            return {
+                "special" : special * 100 / text.length,
+                "number" : number * 100 / text.length,
+                "char" : (lower + upper) * 100 / text.length,
+                "lower" : lower * 100 / text.length,
+                "upper" : upper * 100 / text.length
+            };
+        }
+
+        // --- Methods ---
+
+        // Numbers + Letters + Special characters
+        function defaultMethod(text) {
+            let result = text.charAt(0);
+            for (let i = 1; i < text.length; i++) {
+                if ((text.charCodeAt(i - 1) + text.charCodeAt(i) + i) % 3 == 0) {
+                    result += specialChars.charAt(i % specialChars.length);
+                } else {
+                    result += text.charAt(i);
+                }
+            }
+            return upperLowerCase(result);
+        }
+
+        // Numbers
+        function numbersMethod(text) {
+            let result = "";
+            for (let i = 0; i < text.length; i++) {
+                result += text.charCodeAt(i) % 10; // result always < 10
+            }
+            return result;
+        }
+
+        // Numbers + Letters
+        function numbersLettersMethod(text) {
+            return upperLowerCase(text);
+        }
+
+        // --- Table ---
+
+        async function digestMessage(message) {
+            const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);           // hash the message
+            const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+            return hashHex;
+        }
+
+        function printTable(text) {
+            const tableCont = document.getElementById("table_cont");
+            tableCont.innerHTML = "";
+            let table = document.createElement("table");
+
+            // here we create the character arrays
+            let charArr = [];
+            let invCharArr = [];
+            let _w = 0;
+            let _h = 0;
+            for (let h = 0; h < charTableSize; h++) {
+                charArr.push([]);
+                invCharArr.push([]);
+                _h = 0;
+                for (let w = 0; w < charTableSize; w++) {
+                    charArr[h][w] = text.charAt(h * 8 + w);
+                    invCharArr[_w][_h] = text.charAt(_h * 8 + _w);
+                    _h++;
+                }
+                _w++;
+            }
+
+            // console.log(charArr);
+            // console.log(invCharArr);
+
+            let h = 0;
+            let w = 0;
+            for (let tH = 0; tH < tableSize; tH++) {
+                let tr = document.createElement("tr");
+                if (tH > 0 && tH < 9) w = 0;
+                for (let tW = 0; tW < tableSize; tW++) {
+                    let td = document.createElement("td");
+                    if (tW > 0 && tW < 9 && tH > 0 && tH < 9) {
+                        // square chars
+                        td.innerText = charArr[h][w];
+                        td.addEventListener("click", function() {
+                            addToCopy(this.innerText);
+                            this.style.color = "red";
+                            this.style.fontWeight = "bold";
+                        });
+                        w++;
+                    } else {
+                        if (tH > 0 && tH < 9) {
+                            // vertical dots (left & right)
+                            td.innerText = "·";
+                            let rowArr = [...charArr[h]]; // clone array
+                            let textToCopy = "";
+                            if (tW == 0) {
+                                textToCopy = rowArr.join("");
+                            } else {
+                                rowArr.reverse();
+                                textToCopy = rowArr.join("");
+                            }
+                            td.addEventListener("click", function() {
+                                addToCopy(textToCopy);
+                                this.style.color = "red";
+                                this.style.fontWeight = "bold";
+                            });
+                        } else if (tW > 0 && tW < 9) {
+                            // horizontal dots (top & bottom)
+                            td.innerText = "·";
+                            let rowArr = [...invCharArr[tW - 1]]; // clone array
+                            let textToCopy = "";
+                            if (tH == 0) {
+                                textToCopy = rowArr.join("");
+                            } else {
+                                rowArr.reverse();
+                                textToCopy = rowArr.join("");
+                            }
+                            td.addEventListener("click", function() {
+                                addToCopy(textToCopy);
+                                this.style.color = "red";
+                                this.style.fontWeight = "bold";
+                            });
+                        } else {
+                            // blank corners
+                            td.innerText = " ";
+                            td.style.cursor = "default";
+                        }
+                    }
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+                if (tH > 0 && tH < 9) h++;
+            }
+
+            tableCont.appendChild(table);
+        }
+
+        async function calculateAndPrint(input) {
+            let inputText = input.value;
+            if (inputText == "") inputText = sampText;
+            const digestBuffer = await digestMessage(inputText);
+            let text = errorText;
+
+            switch (document.getElementById("method").value) {
+                case "0":
+                    text = defaultMethod(digestBuffer);
+                    break;
+                case "1":
+                    text = numbersMethod(digestBuffer);
+                    break;
+                case "2":
+                    text = numbersLettersMethod(digestBuffer);
+                    break;
+            }
+
+            console.log(text);
+            console.log(getStats(text));
+            printTable(text);
+        }
+
+        // --- Copy ---
+
+        function addToCopy(text) {
+            const copyInput = document.getElementById("copy_input");
+            copyInput.value += text;
+        }
+
+        function copyInput() {
+            const copyInput = document.getElementById("copy_input");
+            const copySubmit = document.getElementById("copy_submit");
+            copyInput.select();
+            copyInput.setSelectionRange(0, 99999)
+            document.execCommand("copy");
+            // alert("Copied the text: " + copyInput.value);
+            copySubmit.value = "copy again";
+        }
+
+        function clearInput() {
+            const copyInput = document.getElementById("copy_input");
+            copyInput.value = "";
+            calculateAndPrint(document.getElementById('text_input'));
+        }
+
+        // --- Main ---
+
+        function main() {
+            calculateAndPrint(document.getElementById('text_input'));
+        }
+    </script>
+
+    </head>
+    <body onload="main();">
+        <header id="header" aria-label="Header" tabindex="-1">
+            <div id="web_title">glyph 🐭 la</div>
+        </header>
+        <main id="main" aria-label="Main content" tabindex="-1">
+
+            <p>
+                <select id="method" onchange="calculateAndPrint(document.getElementById('text_input'));">
+                    <option value="0">Default method</option>
+                    <option value="1">Numbers</option>
+                    <option value="2">Numbers + letters</option>
+                </select>
+            </p>
+
+            <p id="table_cont"></p>
+
+            <p>
+                <input id="text_input" type="text" style="width: 70%; text-align: center;" placeholder="&gt write here &lt;" onkeyup="calculateAndPrint(this);">
+            </p>
+
+            <p>
+                <input id="copy_input" type="text" style="width: 70%; text-align: center;" placeholder="text to copy" readonly>
+            </p>
+
+            <p>
+                <input type="submit" value="clear" onclick="clearInput();">
+                <input id="copy_submit" type="submit" value="copy" onclick="copyInput();">
+            </p>
+
+        </main>
+        <footer id="footer" aria-label="Licenses and other information" tabindex="-1">
+            <p><small><em>0.1.1 (testing)</em></small></p>
+            <p>
+                <small>
+                    Created by <a href="https://github.com/1noro/record.rat.la">Inoro</a> under the <a href="LICENSE" aria-label="All the code that supports the page is under the GPLv3 license.">GPLv3</a> license
+                </small>
+            </p>
+            <p>
+                <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/" aria-label="All multimedia content is licensed under CC-BY-NC-SA.">
+                    <img alt="Creative Commons BY-NC-SA license" style="border-width: 0; width: auto;" src="img/cc.png" width="80" height="15"/>
+                </a>
+            </p>
+        </footer>
+    </body>
+</html>
